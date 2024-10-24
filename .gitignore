@@ -1,0 +1,19 @@
+# macOS system files
+.DS_Store
+
+# Python virtual environment
+api/venv/
+
+# Python bytecodes
+__pycache__/
+*.py[cod]
+
+# Node modules and build directory
+node_modules/
+build/
+
+# Environment variables
+.env
+
+# Log files
+*.log
