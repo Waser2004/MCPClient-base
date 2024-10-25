@@ -77,6 +77,14 @@ Chatbot widget built with React, TypeScript, Python, and FastAPI. Supports messa
   - On form submission, a request is sent to the backend, and the bot's response is added to the `messages` array after a brief delay to simulate processing.
 - Context Selection
   - A dropdown menu allows users to select the context (e.g., General, Onboarding, Pricing) for their questions, updating the `context` state.
+- Edit and delete
+  - Delete Functionality: Users can delete their messages along with the corresponding bot response, removing them from the messages array.
+  - Edit Functionality: Users can edit a previously sent message, triggering a new request to the backend. The edited message and corresponding bot response are updated in the chat.
+- Refresh the chat
+  - A refresh button allows users to clear the entire chat history and reset the conversation.
+- Auto Scrolling
+- The chat automatically scrolls to the bottom when new messages are sent.
+- Edited or deleted messages do not trigger the scroll so that the user can view their changes.
 
 ### Chatbot.css
 

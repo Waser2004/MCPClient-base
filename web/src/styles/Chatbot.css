@@ -11,9 +11,9 @@
     gap: 10px; 
     background-color: #fff;
     border-radius: 5px;
-    color: black;
+    color: #333333;
     padding: 20px;
-    font-size: 12px;
+    font-size: 13px;
     max-height: 500px;
     width: 350px;
 }
@@ -38,13 +38,18 @@
     margin-top: 5px;
 }
 
-.Chatbot-ui-conversation {
+.Chatbot-ui-conversation-container {
     display: flex;
     flex-direction: column;
+    align-items: center; 
     max-height: 300px;
     overflow-y: scroll;
     padding: 5px 0;
     font-weight: 500;
+}
+
+.Chatbot-ui-messages {
+    width: 90%;
 }
 
 .user-message {
@@ -61,6 +66,25 @@
 .user-message p {
     text-align: left;
     margin: 0;
+}
+
+.edit-message-container {
+    border-radius: 20px;
+    width: 100%;
+    padding: 10px 20px;
+    color: #fff;
+    text-align: left;
+    margin-top: 10px;
+    margin-left: auto;
+}
+
+.edit-message {
+    resize: none;
+    width: 100%;    
+    font-family: 'Roboto', sans-serif;
+    padding: 7px;
+    border: 1px solid #824dff;
+    border-radius: 1px;    
 }
 
 .ava-response {
