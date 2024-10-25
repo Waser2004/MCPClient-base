@@ -1,5 +1,4 @@
-general_questions = [
-    # Original questions
+general_questions = [    
     {"question": "What is Artisan?", "answer": "Artisan is an AI-first platform designed to automate outbound sales, providing AI-driven tools to optimize sales workflows."},
     {"question": "Who is Ava?", "answer": "Ava is Artisan's AI Business Development Representative (BDR) that automates up to 80% of outbound sales tasks."},
     {"question": "What tasks does Ava automate?", "answer": "Ava automates lead research, email personalization, and outreach, allowing sales teams to focus on closing deals."},
@@ -37,6 +36,8 @@ general_questions = [
     {"question": "How does Ava enhance email outreach?", "answer": "Ava personalizes emails using lead data, creating human-like outreach that increases engagement and conversion rates."},
     {"question": "In what ways does Ava personalize emails?", "answer": "Ava uses enriched lead data to tailor email content, making each message relevant and personalized to the recipient."},
     # Greetings and general inquiries
+    {"question": "Hi", "answer": "Hello! How can I assist you today?"},
+    {"question": "Hey", "answer": "Hello! How can I assist you today?"},
     {"question": "Hello!", "answer": "Hello! How can I assist you today?"},
     {"question": "Hi there!", "answer": "Hi there! How can I help you?"},
     {"question": "Good morning!", "answer": "Good morning! What can I do for you today?"},
@@ -60,8 +61,7 @@ general_questions = [
     {"question": "How do I sign up?", "answer": "You can sign up by visiting our website and following the registration process to get started with Artisan."}
 ]
 
-onboarding_questions = [
-    # Original questions
+onboarding_questions = [    
     {"question": "How do I get started with Artisan?", "answer": "After signing up, Ava guides you through setting up your first outbound campaign, starting with lead criteria."},
     {"question": "What do I need for onboarding?", "answer": "You’ll need details like target job titles, industries, company size, and information about your product or service."},
     {"question": "How long does onboarding take?", "answer": "Onboarding can be completed in as little as 10 minutes with Ava’s guided interface."},
@@ -94,6 +94,8 @@ onboarding_questions = [
     {"question": "Can I add team members to Artisan?", "answer": "Yes, you can invite your team members to collaborate and manage campaigns together on the platform."},
     {"question": "How do I onboard my team?", "answer": "You can invite team members through the platform by assigning them roles as Delegates or Members."},
     # Greetings and general inquiries
+    {"question": "Hi", "answer": "Hello! How can I assist you today?"},
+    {"question": "Hey", "answer": "Hello! How can I assist you today?"},
     {"question": "Hello!", "answer": "Hello! How can I assist you today?"},
     {"question": "Hi there!", "answer": "Hi there! How can I help you?"},
     {"question": "Good morning!", "answer": "Good morning! What can I do for you today?"},
@@ -118,8 +120,7 @@ onboarding_questions = [
     {"question": "Can I import my existing contacts?", "answer": "Yes, you can import your existing contacts into Artisan to include them in your campaigns."}
 ]
 
-pricing_questions = [
-    # Original questions
+pricing_questions = [    
     {"question": "How is Artisan priced?", "answer": "Artisan's pricing is based on the volume of leads and can be customized to meet your business needs."},
     {"question": "Do you offer a free trial?", "answer": "Yes, Artisan offers a trial so you can explore the platform and assess its fit for your business."},
     {"question": "Is pricing flexible?", "answer": "Yes, Artisan offers customized pricing packages based on the size of your team and the number of leads you’re targeting."},
@@ -152,6 +153,8 @@ pricing_questions = [
     {"question": "Are there any promotions available?", "answer": "We occasionally run promotions. Please check our website or contact sales to learn about current offers."},
     {"question": "How can I contact sales for pricing details?", "answer": "You can reach our sales team via the contact form on our website or by emailing sales@artisan.com."},
     # Greetings and general inquiries
+    {"question": "Hi", "answer": "Hello! How can I assist you today?"},
+    {"question": "Hey", "answer": "Hello! How can I assist you today?"},
     {"question": "Hello!", "answer": "Hello! How can I assist you today?"},
     {"question": "Hi there!", "answer": "Hi there! How can I help you?"},
     {"question": "Good morning!", "answer": "Good morning! What can I do for you today?"},
