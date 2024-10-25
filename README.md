@@ -60,3 +60,24 @@ Chatbot widget built with React, TypeScript, Python, and FastAPI. Supports messa
 - Tests are written using pytest to verify the functionality of utility functions like find_answer.
 - Test cases ensure the chatbot returns the correct answers for exact questions and tests progressively altered queries to check fuzzy matching accuracy.
 - Run tests using the command pytest from the project root directory.
+
+## Frontend (web folder)
+
+### Chatbot.tsx
+
+- Main component for the chatbot UI and logic.
+- Integrates with FastAPI backend via Axios to send user questions and receive bot responses.
+
+### Chatbot Features
+
+- Message Submission
+  - Messages are sent by pressing Enter or by clicking the send button.
+  - Messages are stored in the `messages` state array, updated dynamically.
+- Bot Response Handling
+  - On form submission, a request is sent to the backend, and the bot's response is added to the `messages` array after a brief delay to simulate processing.
+- Context Selection
+  - A dropdown menu allows users to select the context (e.g., General, Onboarding, Pricing) for their questions, updating the `context` state.
+
+### Chatbot.css
+
+- Defines the appearance and layout for the chatbot widget.
