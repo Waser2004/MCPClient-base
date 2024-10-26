@@ -39,6 +39,7 @@ function Chatbot() {
   // Function to toggle the chatbot open/close state
   function toggleButton() {
     setIsChatbotOpen(!isChatbotOpen);
+    setShouldScroll(true);
   }
 
   // Function to delete a user message and bot reply
