@@ -1,7 +1,7 @@
 import '../styles/Chatbot.css';
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import avaHeadshot from '../assets/img/ava-chatbot-headshot.png';
+import ekoHeadshot from '../assets/img/eko-chatbot-headshot.png';
 import sendIcon from '../assets/img/send-icon.png';
 import userHeadshot from '../assets/img/user-headshot.png';
 import editIcon from '../assets/img/pencil-icon.png';
@@ -207,11 +207,11 @@ function Chatbot() {
             {/* Chatbot heading with avatar and intro text */}
             <div className="Chatbot-ui-heading">
               <img
-                src={avaHeadshot}
-                alt="Ava Chatbot headshot"
+                src={ekoHeadshot}
+                alt="Eko Chatbot headshot"
                 style={{ width: '60px' }}
               />
-              <h3>Hey👋, I'm Ava</h3>
+              <h3>Hey👋, I'm Eko</h3>
               <p>Ask me anything or pick a place to start</p>
             </div>
 
@@ -225,14 +225,14 @@ function Chatbot() {
                       style={{ display: 'flex', alignItems: 'center' }}
                       onMouseLeave={() => setHoveredMessage(null)}
                     >
-                      {/* Conditionally render ava headshot for bot messages */}
+                      {/* Conditionally render Eko headshot for bot messages */}
                       {message.sender === 'bot' && (
                         <img
-                          src={avaHeadshot}
-                          alt="Ava Headshot"
+                          src={ekoHeadshot}
+                          alt="Eko Headshot"
                           style={{
                             width: '25px',
-                            height: '25px',
+                            // height: '25px',
                             marginRight: '10px',
                           }}
                         />
@@ -246,7 +246,7 @@ function Chatbot() {
                             ? 'edit-message-container'
                             : message.sender === 'user'
                               ? 'user-message'
-                              : 'ava-response'
+                              : 'eko-response'
                         }
                         style={{ marginRight: '5px' }}
                         onMouseEnter={() =>
@@ -389,7 +389,7 @@ function Chatbot() {
 
         {/* Button to open and close the chatbot */}
         <button onClick={toggleButton} className="Chatbot-open-toggle">
-          <p>Ask Ava</p>
+          <p>Ask Eko</p>
         </button>
       </div>
     </div>
