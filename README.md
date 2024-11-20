@@ -2,6 +2,8 @@
 
 Eko Chatbot is a customizable customer support chatbot widget built with React, TypeScript, Python, and FastAPI. Designed to help businesses automate responses to common inquiries, Eko enables efficient customer interactions without the need for AI models. Eko’s fuzzy logic technology matches user questions to the best answers from a predefined knowledge base, making setup simple and cost-effective.
 
+https://github.com/user-attachments/assets/e6f2dc12-0bdf-4f6c-aa6c-df942657bd37
+
 ## Prerequisites
 
 ### Frontend Setup
