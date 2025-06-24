@@ -1,0 +1,17 @@
+services:
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: Chatcp.frontend
+    volumes:
+      - ./web:/app
+      # avoid overwriting node_modules in the container
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      # point the frontend at the backend service
+      - REACT_APP_API_URL=http://api:8000
+      # on some setups, forcing polling helps for file-watching
+      - CHOKIDAR_USEPOLLING=true
