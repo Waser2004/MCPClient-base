@@ -12,7 +12,7 @@ interface TokenResponse {
 }
 
 export interface Chunk {
-  type: 'assistant_message' | 'tool_call_request' | 'tool_call_result';
+  type: 'assistant_message' | 'tool_call_request' | 'tool_call_result' | 'tool_call_init';
   payload: any;
 }
 
@@ -141,13 +141,13 @@ export class ApiClient {
   }
 
   // query the API endpoints MCP-CLient and request streaming answer
-  async query_streaming(query: string, onChunk: (chunk: Chunk) => void): Promise<void>{
+  async query_streaming(query: string, onChunk: (chunk: Chunk) => void, noQuery: boolean = false): Promise<void>{
     // fetch the API endpoint
     const res = await fetch(
       `${this.ApiUrl}/query/streaming`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.accessToken}` },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query: query, no_query:noQuery }),
       }
     );
 
@@ -190,6 +190,29 @@ export class ApiClient {
       try {
         onChunk(JSON.parse(buffer));
       } catch { /* ignore */ }
+    }
+  }
+
+  async updateToolResult(toolCallId: string, newResult: string): Promise<boolean> {
+    try{
+      // request to delete message
+      const res = await fetch(
+        `${this.ApiUrl}/query/update_tool_result`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${this.accessToken}` },
+          body: JSON.stringify({ tool_call_id: toolCallId, new_tool_call_result: newResult }),
+        }
+      );
+
+      // evaluate response
+      const raw = await res.json();
+
+      console.log(res)
+
+      const status_code = (typeof raw === 'object') ? raw.status_code : 400
+      return status_code === 200 ? true : false;
+    } catch (err) {
+      return false
     }
   }
 
@@ -244,7 +267,8 @@ export class ApiClient {
 
       // evaluate response
       const raw = await res.json();
-      return (typeof raw === 'object') ? raw.history_cleared : false;
+      const status_code = (typeof raw === 'object') ? raw.status_code : 400
+      return status_code === 200 ? true : false;
     } catch (err) {
       return false
     }
@@ -263,7 +287,8 @@ export class ApiClient {
 
       // evaluate response
       const raw = await res.json();
-      return (typeof raw === 'object') ? raw.message_deleted : false;
+      const status_code = (typeof raw === 'object') ? raw.status_code : 400
+      return status_code === 200 ? true : false;
     } catch (err) {
       return false
     }

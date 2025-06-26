@@ -6,7 +6,7 @@
   padding: 20px;
   color: #fff;
   text-align: left;
-  margin-top: 10px;
+  margin-top: 0;
   margin-left: auto;
 }
 
@@ -15,7 +15,7 @@
   border-radius: 20px;
   width: 70%;
   padding: 20px;
-  margin-top: 10px;
+  margin-top: 0;
   margin-left: auto;
   height: fit-content;
 }
@@ -44,7 +44,7 @@
   display: flex;
   flex-direction: row;
   text-align: left;
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 .tool-message p {
@@ -59,6 +59,26 @@
   text-align: left;
   margin: 0;
   padding: 0;
+}
+
+.tool-message-header-icon-container {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#WorikingIndicator {
+  display: inline-block;
+  animation: spin 1s linear infinite;
 }
 
 .tool-message-details {
@@ -97,10 +117,10 @@
   flex-direction: row;
   justify-content: space-between;
   background-color: #f9bdb9;
-  border-radius: 5px;
+  border-radius: 20px;
   padding: 20px;
   text-align: left;
-  margin-top: 10px;
+  margin-top: 0;
   color: #ed4337;
   border: solid 1px #ed4337;
 }

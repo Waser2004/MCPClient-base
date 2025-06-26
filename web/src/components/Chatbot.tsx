@@ -1,19 +1,18 @@
 import '../styles/Chatbot.css';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import axios, { AxiosInstance } from 'axios';
 import ekoHeadshot from '../assets/img/eko-chatbot-headshot.png';
 import sendIcon from '../assets/img/send-icon.png';
-import userHeadshot from '../assets/img/user-headshot.png';
-import editIcon from '../assets/img/pencil-icon.png';
 import closeIcon from '../assets/img/close-icon.png';
-import deleteIcon from '../assets/img/trash-icon.png';
 import refreshIcon from '../assets/img/refresh-icon.png';
-import arrowUp from '../assets/img/arrow_up.png';
-import arrowDown from '../assets/img/arrow_down.png';
-import { useApi } from "../components/ApiContext"
+
 import { Chunk } from './Api';
+import { useApi } from "../components/ApiContext"
+import { Notifications } from './Notifications';
+import { setNotification, setAlert } from './utils/notificationService';
+import { InputFields, Field, FieldArray } from './InputFields';
 import { CoursePresentation, Course, OverviewCourseCard } from './CoursePresentation';
 import { UserMessage, UserMessageEdit, AssistantMessage, ToolMessageHeader, ToolMessageFooter, ErrorMessage } from './ChatbotMessages';
+import { handleRequestWrapper, isEditingWrapper, setIsEditingWrapper, isErrorWrapper, setIsErrorWrapper} from './utils/globalRequestLockWithOverrides';
 
 // Define an interface for a message
 interface Message {
@@ -29,7 +28,7 @@ interface CourseCodeList {
 interface ToolCall {
   id: string,
   name: string,
-  tool_arguments: Object[],
+  tool_arguments: null | Object[],
   tool_results: null  | Object[]
 }
 
@@ -38,12 +37,16 @@ interface CoursePresentationInterface {
   courses: Course[]
 }
 
+interface InputFieldInterface {
+  id: string
+  fieldArray: Field[]
+}
+
 function Chatbot() {
   const client = useApi();
   const [fakeChat, setFakeChat] = useState<boolean>(false);
 
   // error reporting
-  const [isErrorMessage, setIsErrorMessage] = useState<boolean>(false);
   const [errorRedoFunction, setErrorRedoFunction] = useState<(() => void) | null>(null);
 
   // State for storing the conversation history (user and bot messages)
@@ -59,6 +62,8 @@ function Chatbot() {
 
   // Courses to present
   const [courseList, setCourseList] = useState<CoursePresentationInterface[]>([])
+  const [inputFieldsList, setInputFieldsList] = useState<InputFieldInterface[]>([])
+
   // State for whether the chatbot is open or closed
   const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   // State for storing the new user message input
@@ -75,6 +80,20 @@ function Chatbot() {
     updateMessages(newMessages);
   }
 
+  // Reset height → measure scrollHeight → apply it
+  const autoResize = (ta: HTMLTextAreaElement) => {
+    // get padding
+    const style = getComputedStyle(ta);
+    const paddingTop    = parseFloat(style.paddingTop);
+    const paddingBottom = parseFloat(style.paddingBottom);
+
+    const paddingVertical = paddingTop + paddingBottom
+
+    // set new height
+    ta.style.height = 'auto';
+    ta.style.height = ta.scrollHeight - paddingVertical < 200? `${ta.scrollHeight - paddingVertical}px` : `200px`;
+  };
+
   function createFakeChat() {
     // create fake messages
     const new_user_message: Message = {
@@ -88,53 +107,108 @@ function Chatbot() {
 
     const new_tool_call_message: ToolCall = {
       id: "call_Uk08cUTafoQCwUUnXyyx9g8b",
-      name: "Präsentation von Kursen",
-      tool_arguments: ['{\n  "codes": [\n    "250SE1-GE-EL"\n  ],\n  "descriptions": [\n    "Wollen Sie Ihre Beweglichkeit, Wahrnehmung, Konzentration und innere Ruhe fördern? In stärkenden Yoga-Übungen, Bewegungen, bewusstem Atem und im aufmerksamen Hinhören auf die Bedürfnisse des Körpers werden Energien freigesetzt. Lebenskraft und Lebensfreude entfalten sich. Entspannungsübungen und Meditationen ermöglichen die Erfahrung der Stille in uns. Einstieg jederzeit möglich."\n  ]\n}'],
-      tool_results: ['{\n  "codes": [\n    "250SE1-GE-EL"\n  ],\n  "descriptions": [\n    "Wollen Sie Ihre Beweglichkeit, Wahrnehmung, Konzentration und innere Ruhe fördern? In stärkenden Yoga-Übungen, Bewegungen, bewusstem Atem und im aufmerksamen Hinhören auf die Bedürfnisse des Körpers werden Energien freigesetzt. Lebenskraft und Lebensfreude entfalten sich. Entspannungsübungen und Meditationen ermöglichen die Erfahrung der Stille in uns. Einstieg jederzeit möglich."\n  ]\n}']
+      name: "Erfassung von Daten",
+      tool_arguments: [],
+      tool_results: []
     };
-    const course_info: Course = {
-      code: "250SE1-GE-EL",
-      title: "Gerlafingen - Deutsch Elternkurs mit Kinderbetreuung",
-      description: "Hatha Yoga: Yoga-Übungen zur Förderung von Beweglichkeit, Wahrnehmung, Konzentration und innerer Ruhe, inkl. Entspannung und Meditation. Einstieg jederzeit möglich.",
-      summary: "Hallo",
-      date: "Mo 20.01.2025 08:30 - Mi 25.06.2025 11:00",
-      weekdays: "Mo 20.01.2025 08:30 - Mi 25.06.2025 11:00",
-      placesLeft: true,
-      places: ["Pfarramt Gerlafingen"],
-      events: {
-        eventCount: 20,
-        eventTimes: [{
-          count: 10,
-          time: "Mo 15:00 - 16:15"
-        }, {
-          count: 10,
-          time: "Mi 14:15 - 15:30"
-        }]
-      },
-      prices: [{
-        name: "Standard",
-        price: 500,
-        currency: "CHF"
-      }, {
-        name: "Mitglied",
-        price: 400,
-        currency: "CHF"
-      }, {
-        name: "Senioren",
-        price: 300,
-        currency: "CHF"
-      }],
-      categories: ["Deutsch", "Gerlafingen", "Sprachen"]
-    }
-    const course_presentation: CoursePresentationInterface = {
+    const inputFields: InputFieldInterface = {
       id: "call_Uk08cUTafoQCwUUnXyyx9g8b",
-      courses: [course_info]
+      fieldArray: [
+        {
+          label: "Anrede",
+          type: "radio",
+          choices: [
+            "Frau", 
+            "Herr",
+            "Divers"
+          ],
+          value: ""
+        },
+        {
+          label: "Firma",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Vorname",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Nachname",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Postfach",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Strasse",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Postleitzahl",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Ort",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "E-Mail",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Telefon",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Ich akzeptiere die AGB",
+          type: "checkbox",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Ich akzeptiere den Datenschutz",
+          type: "checkbox",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Bemerkungen",
+          type: "input",
+          choices: [],
+          value: ""
+        },
+        {
+          label: "Geburtstag",
+          type: "input",
+          choices: [],
+          value: ""
+        }
+      ]
     }
 
     // add them to the list
     setMessages([new_user_message, new_tool_message]);
     setToolCalls([new_tool_call_message]);
-    setCourseList([course_presentation]);
+    setInputFieldsList([inputFields]);
   }
 
   // Function to toggle the chatbot open/close state
@@ -168,25 +242,25 @@ function Chatbot() {
       createFakeChat();
       setFakeChat(true);
     }
-  }, [messages, shouldScroll]);
+  }, [messages, courseList, shouldScroll]);
 
   function deleteErrorMessage() {
     // delete error message
-    if (isErrorMessage){
+    if (isErrorWrapper){
       setMessages(messagesRef.current.slice(0, -1));
     }
 
-    setIsErrorMessage(false);
+    setIsErrorWrapper(false);
     setErrorRedoFunction(null);
   }
 
   function raiseErrorMessage(error_message: string, error_redo_function: () => void) {
     // set as error
-    setIsErrorMessage(true);
+    setIsErrorWrapper(true);
     setErrorRedoFunction(() => () => {
       // reset error parameters
       setMessages(messagesRef.current.slice(0, -1));
-      setIsErrorMessage(false)
+      setIsErrorWrapper(false);
 
       // retry action that caused error
       error_redo_function()
@@ -204,7 +278,7 @@ function Chatbot() {
   }
 
   // Refresh / reset the chatbot
-  const handleRefresh = async () => {
+  const handleRefresh = handleRequestWrapper(async () => {
     // request to delete history
     const refresh_success = await client.clearMessageHistory();
 
@@ -219,12 +293,18 @@ function Chatbot() {
       setToolCalls([]);
       setCourseList([]);
       setNewMessages('');
+      editMessage.forcePersistent(null)
 
       localStorage.removeItem("messages");
     }
-  }
+  });
 
-  const deleteMessage = async (index: number, fromRefreshMessage: boolean = false) => {
+  const editMessage = handleRequestWrapper(async (index: number | null) => {
+    setEditMessageIndex(index);
+    setIsEditingWrapper(!index ? false : true);
+  });
+
+  const deleteMessage = handleRequestWrapper(async (index: number, fromRefreshMessage: boolean = false) => {
     // request to delete message
     const delete_success = await client.deleteMessage(index);
     // error
@@ -237,7 +317,7 @@ function Chatbot() {
       }
 
       return false
-    } 
+    }
   
     // success
     // get tool calls that have to be deleted
@@ -258,47 +338,44 @@ function Chatbot() {
     setMessages(newMessages);
 
     return true
-  }
+  });
 
-  const refreshMessage = async (index: number) => {
+  const refreshMessage = handleRequestWrapper(async (index: number) => {
     // store message
-    index = index >= 0 ? index : messagesRef.current.length + index
-    const refresh_message: Message = {
-      role: "user",
-      content: messagesRef.current[index].content
-    }
+    const idx = index >= 0 ? index + 1 : messagesRef.current.length + index + 1
+    console.log(idx);
 
     // delete all the messages and add refresh message to messages
-    const delete_success = await deleteMessage(index, true);
+    const delete_success = await deleteMessage.forcePersistent(idx, true);
 
     // only proceed if the message was successfuly deleted
     if (!delete_success){
       raiseErrorMessage(
         "I'm sorry while refreshing the message something went wrong, please try again",
-        () => refreshMessage(index)
+        () => refreshMessage(idx)
       )
+      return;
     }
 
     // process new query
-    setMessages([...messagesRef.current, refresh_message])
     setIsBotResponding(true)
     setShouldScroll(true)
 
     try {
-      await processStreaiming(refresh_message.content)
+      await processStreaming("", true)
     } catch (error) {
       console.log(error);
       raiseErrorMessage(
         "I'm sorry while refreshing the message something went wrong, please try again",
-        () => refreshMessage(index)
+        () => refreshMessage(idx)
       )
     } finally {
       // Enable the send button after the bot responds or an error occurs
       setIsBotResponding(false);
     }
-  }
+  });
 
-  const updateMessage = async (index: number, newContent: string) => {
+  const updateMessage = handleRequestWrapper(async (index: number, newContent: string) => {
 
     // update message
     const newMessages = messagesRef.current.map((m, i) =>
@@ -307,12 +384,69 @@ function Chatbot() {
     setMessages(newMessages);
 
     // exit
-    setEditMessageIndex(null)
+    editMessage.forcePersistent(null)
 
-    await refreshMessage(index);
-  }
+    await refreshMessage.forcePersistent(index);
+  });
 
-  const processStreaiming = async (content: string) => {
+  const singUpFor = handleRequestWrapper(async (tool_call_id: string, course_index: number, force_delete: boolean = false) => {
+    // get course list
+    const courseArray: CoursePresentationInterface | undefined = courseList.find(c => c.id === tool_call_id)
+    const course: Course | undefined = courseArray === undefined ? undefined : courseArray.courses[course_index]
+
+    // get message index
+    const messageIndex = messages.findIndex(m => m.content === tool_call_id)
+
+    if (course === undefined || messageIndex === undefined){
+      console.log("Ups something went wrong")
+      return
+    } else if (messageIndex + 1 != messagesRef.current.length) {
+      // ask the user if he wants to delete the 
+      if (!force_delete){
+        setAlert({message: "Wenn sie mit der Anneldung Fortfahren möchten, werden die Nachrichten nach dieser neu generiert!", onConfirm: () => singUpFor(tool_call_id, course_index, true)})
+        return
+      }
+      // delete next messages and follow thorugh!
+      console.log(messageIndex + 1)
+      const deleteResult = await deleteMessage.forcePersistent(messageIndex + 1);
+
+      if (!deleteResult) {return}
+    }
+    // create new tool result
+    const courseCode = course.code
+    const newResult: string = `The user decided to signup for the course ${courseCode}. initialize the signup!`
+    
+    // request to change tool result
+    const apiResult = await client.updateToolResult(tool_call_id, newResult)
+
+    console.log(apiResult)
+
+    if (apiResult) {
+      // update tool result
+      setToolCalls(tool_calls => 
+        tool_calls.map(tool_call => 
+          tool_call.id === tool_call_id
+          ? {...tool_call, tool_results:[newResult]}
+          : tool_call
+        )
+      );
+
+      // start streaming
+      try {
+        await processStreaming("", true);
+      } catch (error) {
+        raiseErrorMessage(
+          "I'm sorry while processing your request something went wrong",
+          () => refreshMessage(messages.length)
+        )
+      } finally {
+        // Enable the send button after the bot responds or an error occurs
+        setIsBotResponding(false);
+      }
+    }
+  });
+
+  const processStreaming = async (content: string, noQuery: boolean = false) => {
     await client.query_streaming(content, (chunk: Chunk) => {
         if (chunk.type === 'assistant_message') {
           // extract cunck-text and and last message
@@ -336,13 +470,33 @@ function Chatbot() {
             setMessages([...messagesRef.current, { role: 'assistant', content: text }])
           }
         } 
-        // process tool_call request
-        else if (chunk.type === 'tool_call_request') {
-          // create message
+        // process tool_call initialization
+        else if (chunk.type === 'tool_call_init') {
+          // create message that tool has been called
           const message: Message = {
             role: "tool",
-            content: chunk.payload.content.id
+            content: "tool_call_initialized"
           };
+
+          setMessages([...messagesRef.current, message]);
+        }
+        // process tool_call request
+        else if (chunk.type === 'tool_call_request') {
+          const last: Message = messagesRef.current[messagesRef.current.length - 1]
+
+          // add tool id to Message
+          if (last.role === "tool" && last.content === "tool_call_initialized"){
+            last.content = chunk.payload.content.id;
+          }
+          // create new tool call message since no other is available
+          else{
+            const message: Message = {
+              role: "tool",
+              content: chunk.payload.content.id
+            };
+            setMessages([...messagesRef.current, message]);
+          }
+          
 
           // create tool call message
           const json_arguments = JSON.parse(chunk.payload.content.arguments)
@@ -352,8 +506,7 @@ function Chatbot() {
             tool_arguments: json_arguments,
             tool_results: null
           };
-        
-          setMessages([...messagesRef.current, message]);
+          
           setToolCalls(prev => [...prev, tool_call]);
         }
         // process tool_call result
@@ -375,6 +528,11 @@ function Chatbot() {
               })
               .catch(err => console.log(err))
           }
+          // fetch input fields data
+          if (name === "Erfassung von Daten"){
+            const parsed: FieldArray = result;
+            setInputFieldsList(prev => [...prev, {id: id, fieldArray: parsed.fields}])
+          }
 
           // add result to tool call entry
           setToolCalls(old =>
@@ -383,10 +541,10 @@ function Chatbot() {
         }
         // once we’ve rendered a bit of assistant output, scroll
         setShouldScroll(true);
-      });
+      }, noQuery);
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = handleRequestWrapper(async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Disable sending messages until the bot responds
@@ -404,7 +562,7 @@ function Chatbot() {
     setShouldScroll(true);
 
     try {
-      await processStreaiming(newMessageObj.content);
+      await processStreaming(newMessageObj.content);
     } catch (error) {
       raiseErrorMessage(
         "I'm sorry while processing your request something went wrong",
@@ -414,10 +572,10 @@ function Chatbot() {
       // Enable the send button after the bot responds or an error occurs
       setIsBotResponding(false);
     }
-  };
+  });
 
   return (
-    <div>
+    <>
       <div className="Chatbot-ui-container">
         {/* Chatbot is displayed only if it's open */}
         {isChatbotOpen && (
@@ -441,6 +599,7 @@ function Chatbot() {
                 src={ekoHeadshot}
                 alt="Eko Chatbot headshot"
                 style={{ height: '50px' }}
+                onClick={() => (setNotification("Hey I am welantebot!"))}
               />
               {/* Close button on the right */}
               <img
@@ -454,39 +613,62 @@ function Chatbot() {
 
             {/* Conversation area (user messages and bot responses will appear here) */}
             <div className="Chatbot-ui-conversation-container">
+
+              <Notifications />
+
               <div className="Chatbot-ui-messages">
                 {messages.map((message, index) => {
                   if (message.role === "user"){
                     if (editMessageIndex == null || editMessageIndex != index){
-                      return (<UserMessage key={index} content={message.content} onRefresh={() => refreshMessage(index)} onEdit={() => setEditMessageIndex(index)} onDelete={() => deleteMessage(index)} />)
+                      return (<UserMessage key={index} content={message.content} onRefresh={() => refreshMessage(index)} onEdit={() => editMessage(index)} onDelete={() => deleteMessage(index)} />)
                     } else{
-                      return (<UserMessageEdit key={index} content={message.content} onDiscard={() => setEditMessageIndex(null)} onSubmit={(text: string) => (updateMessage(index, text))}/>)
+                      return (<UserMessageEdit key={index} content={message.content} onDiscard={() => editMessage.force(null)} onSubmit={(text: string) => (updateMessage.force(index, text))}/>)
                     }
                   } else if (message.role === "assistant"){
                     return (<AssistantMessage key={index}  role={message.role} content={message.content} />)
                   } else if (message.role === "tool"){
-                    const tool_call = toolCalls.find(tc => tc.id === message.content);
-                    
-                    if (tool_call === undefined) {
-                      return(<p key={index}>No such tool call</p>)
-                    } else {
-                      const courseSearch: CoursePresentationInterface | undefined = courseList.find(c => c.id === tool_call.id)
-                      const coursesToPresent = courseSearch === undefined ? null : courseSearch.courses
+                    // get tool call info
+                    const toolCallListSearch: ToolCall | undefined = toolCalls.find(tc => tc.id === message.content)
+                    const tool_call: ToolCall = 
+                      toolCallListSearch === undefined 
+                      ? {
+                        id: "",
+                        name: message.content === "tool_call_initialized" ? "Tool Nutzung...": "nicht registrierter tool call",
+                        tool_arguments: null,
+                        tool_results: null,
+                      }
+                      : toolCallListSearch;
 
-                      return(
-                        <div className="tool-message"key={index}>
-                          <ToolMessageHeader  name={tool_call.name} onToggle={() => expandToolCall(index)} expanded={expandedIndices.has(index)}/>
-                          
-                          {/* Tool message content */}
-                          {tool_call.name === "Präsentation von Kursen" && coursesToPresent != null && (
-                            <CoursePresentation courses={coursesToPresent}/>
-                          )}
-                          
-                          {expandedIndices.has(index) && (
-                            <ToolMessageFooter tool_arguments={tool_call.tool_arguments} tool_results={tool_call.tool_results} />
-                          )}
-                        </div>
-                    )}
+                    // get course presentatino data
+                    const courseSearch: CoursePresentationInterface | undefined = courseList.find(c => c.id === tool_call.id)
+                    const coursesToPresent = courseSearch === undefined ? null : courseSearch.courses
+
+                    // get Input fields data
+                    const inputFields: InputFieldInterface | undefined = inputFieldsList.find(infi => infi.id === tool_call.id)
+                    const inputFieldsToPresent = inputFields === undefined ? null : inputFields.fieldArray
+
+                    return(
+                      <div className="tool-message"key={index}>
+                        <ToolMessageHeader  
+                          displayString={tool_call.name} 
+                          onToggle={() => expandToolCall(index)} 
+                          expanded={expandedIndices.has(index)} 
+                          toolCallComplete={tool_call.tool_results === null ? false : true}
+                        />
+                        
+                        {/* Tool message content */}
+                        {tool_call.name === "Präsentation von Kursen" && coursesToPresent != null && (
+                          <CoursePresentation courses={coursesToPresent} onSubmit={async (idx: number) => (await singUpFor(tool_call.id, idx))} onRender={() => setShouldScroll(true)}/>
+                        )}
+                        {tool_call.name === "Erfassung von Daten" && inputFieldsToPresent != null && (
+                          <InputFields fields={inputFieldsToPresent}/>
+                        )}
+                        
+                        {expandedIndices.has(index) && (
+                          <ToolMessageFooter tool_arguments={tool_call.tool_arguments} tool_results={tool_call.tool_results} />
+                        )}
+                      </div>
+                    )
                   } else if (message.role === "error"){
                     const redo_function = errorRedoFunction != null ? errorRedoFunction : () => (null)
 
@@ -502,38 +684,41 @@ function Chatbot() {
 
               {/* Form for message input and context selection */}
               <form onSubmit={handleSubmit} className="Chatbot-ui-input-form">
-                  <textarea
-                    className="Chatbot-input"
-                    placeholder="Deine Frage"
-                    value={newMessage}
-                    required
-                    onChange={(e) => setNewMessages(e.target.value)}
-                    // Allow the user to press the return key on their keyboard to submit a message
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === 'Enter' &&
-                        !e.shiftKey &&
-                        newMessage.trim() !== '' &&
-                        !isBotResponding
-                      ) {
-                        // Prevent default behavior of Enter (new line)
-                        e.preventDefault();
-                        // Call the submit function
-                        handleSubmit(e);
-                      }
-                    }}
-                  ></textarea>
+                <textarea
+                  className="Chatbot-input"
+                  placeholder="Deine Frage"
+                  value={newMessage}
+                  required
+                  onChange={(e) => {
+                    setNewMessages(e.target.value) 
+                    autoResize(e.currentTarget)
+                  }} 
+                  rows={1}
+                  // Allow the user to press the return key on their keyboard to submit a message
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      !e.shiftKey &&
+                      newMessage.trim() !== ''
+                    ) {
+                      // Prevent default behavior of Enter (new line)
+                      e.preventDefault();
+                      // Call the submit function
+                      handleSubmit(e);
+                    }
+                  }}
+                ></textarea>
 
-                  <div className="Chatbot-ui-send-btn">
-                    {/* Send button to submit the message */}
-                    <button type="submit" disabled={isBotResponding}>
-                      <img
-                        src={sendIcon}
-                        alt="Send message"
-                        style={{ width: '18px' }}
-                      />
-                    </button>
-                  </div>
+                <div className="Chatbot-ui-send-btn">
+                  {/* Send button to submit the message */}
+                  <button type="submit" disabled={isBotResponding}>
+                    <img
+                      src={sendIcon}
+                      alt="Send message"
+                      style={{ width: '18px' }}
+                    />
+                  </button>
+                </div>
               </form>
             </div>
           </div>
@@ -542,14 +727,14 @@ function Chatbot() {
       </div>
 
       {/* Button to open and close the chatbot */}
-      <button onClick={toggleButton} className="Chatbot-open-toggle">
-        <img
-          src={ekoHeadshot}
-          alt="Eko Chatbot headshot"
-          style={{ width: '30px' }}
-        />
-      </button>
-    </div>
+        <button onClick={toggleButton} className="Chatbot-open-toggle">
+          <img
+            src={ekoHeadshot}
+            alt="Eko Chatbot headshot"
+            style={{ width: '30px' }}
+          />
+        </button>
+    </>
   );
 }
 

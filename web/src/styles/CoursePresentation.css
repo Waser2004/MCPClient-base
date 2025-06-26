@@ -9,9 +9,14 @@
 .course-presentation-card{
     grid-column: auto;
     grid-template-rows: subgrid;
-    padding: 10px;
-    border-radius: 5px;
-    background-color: #eeeeee;
+    padding: 15px;
+    border-radius: 20px;
+    background-color: #dddddd;
+    border: solid 1px #aaaaaa;
+}
+
+#CoursePresentationTitle {
+    margin-top: 0;
 }
 
 #course-presentation-card-subtitle {
@@ -38,6 +43,7 @@ button{
     margin-right: 5px;
 
     background-color: #dddddd;
+    border: solid 1px #aaaaaa;
     color: #333333;
 }
 

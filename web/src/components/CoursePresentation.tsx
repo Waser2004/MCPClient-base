@@ -34,11 +34,6 @@ export interface CourseArray {
     courses: Course[]
 }
 
-export interface FullCourseViewProps {
-    courses: Course[];
-    onCollapse: () => void;
-}
-
 export interface OverviewCourseCard {
     code: string
     title: string
@@ -46,12 +41,13 @@ export interface OverviewCourseCard {
     date: string
 }
 
-export interface OverviewCourseCardProps {
-    courses: OverviewCourseCard[];
-    onExpand: (index: number) => void;
+interface CoursePresentationProps {
+    courses: Course[]
+    onSubmit: (index: number) => void
+    onRender: () => void
 }
 
-export const CoursePresentation: React.FC<CourseArray> = ({courses}) => {
+export const CoursePresentation: React.FC<CoursePresentationProps> = ({courses, onSubmit, onRender}) => {
     // create variable to show expanded course
     const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
@@ -73,6 +69,7 @@ export const CoursePresentation: React.FC<CourseArray> = ({courses}) => {
                 <CoursePresentationFull 
                     courses={[courses[expandedIndex]]}
                     onCollapse={() => setExpandedIndex(null)}
+                    onSubmit={() => onSubmit(expandedIndex)}
                 />
             )}
 
@@ -80,14 +77,21 @@ export const CoursePresentation: React.FC<CourseArray> = ({courses}) => {
             {typeof expandedIndex != "number" && (
                 <CoursePresentationOverview 
                     courses={get_course_oveview_data()}
-                    onExpand={idx => setExpandedIndex(idx)}
+                    onExpand={idx => {setExpandedIndex(idx); onRender()}}
+                    onSubmit={idx => onSubmit(idx)}
                 />
             )}
         </>
     )
 };
 
-export const CoursePresentationFull: React.FC<FullCourseViewProps> = ({ courses, onCollapse }) => {
+export interface FullCourseViewProps {
+    courses: Course[];
+    onCollapse: () => void;
+    onSubmit: () => void;
+}
+
+export const CoursePresentationFull: React.FC<FullCourseViewProps> = ({ courses, onCollapse, onSubmit }) => {
     const course = courses[0];
 
     // return html template
@@ -96,7 +100,7 @@ export const CoursePresentationFull: React.FC<FullCourseViewProps> = ({ courses,
 
             {/* Create Course card for each course */}
             <div className="course-presentation-card">
-                <h2>{course.title}</h2>
+                <h2 id="CoursePresentationTitle">{course.title}</h2>
                 <p id="course-presentation-card-subtitle">{course.code} · {course.date}</p>
 
                 <hr/>
@@ -138,7 +142,7 @@ export const CoursePresentationFull: React.FC<FullCourseViewProps> = ({ courses,
                     <button id="course-presentation-card-button-1" onClick={onCollapse}>
                         <p style={{textAlign: "center"}}>Weniger Infos</p>
                     </button>
-                    <button id="course-presentation-card-button-2">
+                    <button id="course-presentation-card-button-2" onClick={onSubmit}>
                         <p style={{textAlign: "center"}}>Anmelden</p>
                     </button>
                 </div>
@@ -148,7 +152,13 @@ export const CoursePresentationFull: React.FC<FullCourseViewProps> = ({ courses,
     )
 };
 
-export const CoursePresentationOverview: React.FC<OverviewCourseCardProps> = ({ courses, onExpand }) => {
+export interface OverviewCourseCardProps {
+    courses: OverviewCourseCard[];
+    onExpand: (index: number) => void;
+    onSubmit: (index: number) => void;
+}
+
+export const CoursePresentationOverview: React.FC<OverviewCourseCardProps> = ({ courses, onExpand, onSubmit }) => {
     // return html template
     return(
         <div className="course-presentation">
@@ -158,7 +168,7 @@ export const CoursePresentationOverview: React.FC<OverviewCourseCardProps> = ({ 
 
                 <div className="course-presentation-card" key={index}>
                     <div className="course-presentation-card-header">
-                        <h2>{course.title}</h2>
+                        <h2 id="CoursePresentationTitle">{course.title}</h2>
                     </div>
                     
                     <div className="course-presentation-card-content">
@@ -176,7 +186,7 @@ export const CoursePresentationOverview: React.FC<OverviewCourseCardProps> = ({ 
                         <button id="course-presentation-card-button-1" onClick={() => onExpand(index)}>
                             <p style={{textAlign: "center"}}>Mehr Infos</p>
                         </button>
-                        <button id="course-presentation-card-button-2">
+                        <button id="course-presentation-card-button-2"  onClick={() => onSubmit(index)}>
                             <p style={{textAlign: "center"}}>Anmelden</p>
                         </button>
                     </div>

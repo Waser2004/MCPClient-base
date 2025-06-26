@@ -31,7 +31,7 @@ interface UserMessageProps{
 
 export const UserMessage: React.FC<UserMessageProps> = ({ content, onDelete, onEdit, onRefresh }) => {
     return (
-        <>
+        <div>
             <div className="user-message">
                 <p>{content}</p>
             </div>
@@ -55,7 +55,7 @@ export const UserMessage: React.FC<UserMessageProps> = ({ content, onDelete, onE
                     onClick={() => onDelete()}
                 />
             </div>
-        </>
+        </div>
     )
 }
 
@@ -83,7 +83,7 @@ export const UserMessageEdit: React.FC<UserMessageEditProps> = ({ content, onDis
     }
 
     return (
-        <>
+        <div>
             <div className="user-message-edit">
                 <textarea ref={textAreaRef} id="user-message-entry" defaultValue={content} onInput={(e) => autoResize(e.currentTarget)} rows={1} />
             </div>
@@ -101,7 +101,7 @@ export const UserMessageEdit: React.FC<UserMessageEditProps> = ({ content, onDis
                     onClick={() => handleSubmit()}
                 />
             </div>
-        </>
+        </div>
     )
 }
 
@@ -122,28 +122,39 @@ export const AssistantMessage: React.FC<Message> = ({ role, content }) => {
 }
 
 interface ToolCallHeaderProps {
-    name: string
+    displayString: string
     onToggle: () => void
     expanded: boolean
+    toolCallComplete: boolean
 }
 
 
-export const ToolMessageHeader: React.FC<ToolCallHeaderProps> = ({ name, onToggle, expanded }) => {
+export const ToolMessageHeader: React.FC<ToolCallHeaderProps> = ({ displayString, onToggle, expanded, toolCallComplete }) => {
     return (
         <div className="tool-message-header">
-            <p>{`Nutze Tool zur ${name}...`}</p>
-            <img 
-                src={expanded ? arrowDown : arrowUp}
-                alt="expand/close Tool Call"
-                style={{ cursor: 'pointer', width: '1rem', height: 'auto', display: 'inline-block'}}
-                onClick={() => onToggle()}
-            />
+            <p>{displayString}</p>
+            <div className="tool-message-header-icon-container">
+                {!toolCallComplete && (
+                    <img 
+                        id="WorikingIndicator"
+                        src={refreshIcon}
+                        alt="tool call in progress"
+                        style={{ width: '1rem', height: 'auto', display: 'inline-block'}}
+                    />
+                )}
+                <img 
+                    src={expanded ? arrowDown : arrowUp}
+                    alt="expand/close Tool Call"
+                    style={{ cursor: 'pointer', width: '1rem', height: 'auto', display: 'inline-block'}}
+                    onClick={() => onToggle()}
+                />
+            </div>
         </div>
     )
 }
 
 interface ToolCallFooterProps {
-    tool_arguments: Object
+    tool_arguments: null | Object
     tool_results: null | Object
 }
 
