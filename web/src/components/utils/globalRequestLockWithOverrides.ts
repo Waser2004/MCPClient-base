@@ -4,6 +4,7 @@ import { setNotification } from "./notificationService";
 export let isProcessingRequestWrapper: boolean = false;
 export let isErrorWrapper: boolean = false;
 export let isEditingWrapper: boolean = false;
+export let isAuthenticatedWrapper: boolean = false;
 
 export function setIsProcessingRequestWrapper(state: boolean) {
   isProcessingRequestWrapper = state
@@ -15,6 +16,10 @@ export function setIsErrorWrapper(state: boolean) {
 
 export function setIsEditingWrapper(state: boolean) {
   isEditingWrapper = state
+}
+
+export function setIsAuthenticatedWrapper(state: boolean) {
+  isAuthenticatedWrapper = state
 }
 
 type AsyncFn<Args extends any[], R> = (...args: Args) => Promise<R>;
@@ -40,6 +45,9 @@ export function handleRequestWrapper<Args extends any[], R>(
       return;
     } else if (isErrorWrapper) {
       setNotification("Es ist ein Fehler aufgetreten, Verwenden sie die Knöpfe in der Fehlermeldung um den Fehler zu löschen oder die Funktion zu wiederholen!", 5000)
+      return;
+    } else if (!isAuthenticatedWrapper){
+      setNotification("Es besteht keine Verbindung zum Server, deshalb können keine Funktionen ausgeführt werden.", 5000)
       return;
     }
     isProcessingRequestWrapper = true;

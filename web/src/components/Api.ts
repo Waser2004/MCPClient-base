@@ -6,6 +6,11 @@ interface Message {
   content: string;
 }
 
+interface CurrentUser {
+  username: string | null
+  sessionid: string | null
+}
+
 interface TokenResponse {
   access_token: string;
   token_type: string;
@@ -31,6 +36,23 @@ export class ApiClient {
   constructor() {
     // create an axios instance for reuse
     this.axiosInstance = axios.create({withCredentials: true});
+
+    // REQUEST interceptor: ensure we’re authenticated & attach the token
+    this.axiosInstance.interceptors.request.use(
+      async (config) => {
+        // skip if try to authenticate
+        if (config.url === `${this.ApiUrl}/auth/token`) {return config}
+
+        // If we don't yet have a token, authenticate
+        if (!this.accessToken) {
+          await this.authenticate("Standard", "password"); // your method to log in / get accessToken
+        }
+        // Inject the access token
+        config.headers = config.headers || {};
+        config.headers['Authorization'] = `Bearer ${this.accessToken}`;
+        return config;
+      },
+    );
 
     // Response interceptor to catch 401s
     this.axiosInstance.interceptors.response.use(
@@ -87,19 +109,24 @@ export class ApiClient {
     params.append('client_secret', '');
 
     // make post request
-    const response = await this.axiosInstance.post<TokenResponse>(
-      `${this.ApiUrl}/auth/token`,
-      params.toString(),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Accept': 'application/json',
-        },
-      }
-    );
+    try{
+      const response = await this.axiosInstance.post<TokenResponse>(
+        `${this.ApiUrl}/auth/token`,
+        params.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+          },
+          timeout: 2000
+        }
+      );
 
-    // store token
-    this.accessToken = response.data.access_token;
+      // store token
+      this.accessToken = response.data.access_token;
+    } catch {
+      console.log("failed to authenticate use, an error accured!")
+    }
   }
 
   // refresh
@@ -110,16 +137,22 @@ export class ApiClient {
   }
 
   // function to get current user
-  async getcurrentUser(): Promise<void> {
-    const response = await this.axiosInstance.get<TokenResponse>(
+  async getcurrentUser(): Promise<CurrentUser> {
+    try{
+      const response = await this.axiosInstance.get<CurrentUser>(
         `${this.ApiUrl}/auth/users/me/`,
         {
             headers: {
             'Accept': 'application/json',
             'Authorization': `Bearer ${this.accessToken}`
             },
+            timeout: 2000
         }
-    );
+      );
+      return response.data
+    } catch {
+      return {username: null, sessionid: null}
+    }
   }
 
   // query the API endpoints MCP-Client and request a non streaming answer

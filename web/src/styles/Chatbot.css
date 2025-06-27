@@ -80,6 +80,31 @@ button {
   gap: 10px;
 }
 
+.auth-failed-message-conteiner {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  height: 100%;
+  color: #ed4337;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.woriking-indicator {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+
 .user-message {
   background-color: #8ce195;
   border-radius: 20px;

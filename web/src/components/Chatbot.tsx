@@ -4,15 +4,16 @@ import ekoHeadshot from '../assets/img/eko-chatbot-headshot.png';
 import sendIcon from '../assets/img/send-icon.png';
 import closeIcon from '../assets/img/close-icon.png';
 import refreshIcon from '../assets/img/refresh-icon.png';
+import refreshIconError from '../assets/img/refresh-icon-error.png';
 
 import { Chunk } from './Api';
 import { useApi } from "../components/ApiContext"
 import { Notifications } from './Notifications';
 import { setNotification, setAlert } from './utils/notificationService';
-import { InputFields, Field, FieldArray } from './InputFields';
+import { InputFields, Field, formReturn } from './InputFields';
 import { CoursePresentation, Course, OverviewCourseCard } from './CoursePresentation';
 import { UserMessage, UserMessageEdit, AssistantMessage, ToolMessageHeader, ToolMessageFooter, ErrorMessage } from './ChatbotMessages';
-import { handleRequestWrapper, isEditingWrapper, setIsEditingWrapper, isErrorWrapper, setIsErrorWrapper} from './utils/globalRequestLockWithOverrides';
+import { handleRequestWrapper, isEditingWrapper, setIsEditingWrapper, isErrorWrapper, setIsErrorWrapper, setIsAuthenticatedWrapper} from './utils/globalRequestLockWithOverrides';
 
 // Define an interface for a message
 interface Message {
@@ -49,7 +50,12 @@ function Chatbot() {
   // error reporting
   const [errorRedoFunction, setErrorRedoFunction] = useState<(() => void) | null>(null);
 
+  // authentication status
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(false);
+
   // State for storing the conversation history (user and bot messages)
+  const defaultMessage: string = "Hey, ich bin welanteBot.\nMeine Aufgaben sind es dir bei der Kurssuche und bei der Kursanmeldung zu helfen.\nWas kann ich heute für dich tun?"
   const [messages, updateMessages] = useState<Message[]>([]);
   const messagesRef = useRef<Message[]>([]);
   const [toolCalls, setToolCalls] = useState<ToolCall[]>([]);
@@ -94,127 +100,38 @@ function Chatbot() {
     ta.style.height = ta.scrollHeight - paddingVertical < 200? `${ta.scrollHeight - paddingVertical}px` : `200px`;
   };
 
-  function createFakeChat() {
-    // create fake messages
-    const new_user_message: Message = {
-      role: "user",
-      content: "Hey, kannst du mir helfen mir den Kurs 250SE1-GE-EL präsentieren?"
-    };
-    const new_tool_message: Message = {
-      role: "tool",
-      content: "call_Uk08cUTafoQCwUUnXyyx9g8b"
-    };
-
-    const new_tool_call_message: ToolCall = {
-      id: "call_Uk08cUTafoQCwUUnXyyx9g8b",
-      name: "Erfassung von Daten",
-      tool_arguments: [],
-      tool_results: []
-    };
-    const inputFields: InputFieldInterface = {
-      id: "call_Uk08cUTafoQCwUUnXyyx9g8b",
-      fieldArray: [
-        {
-          label: "Anrede",
-          type: "radio",
-          choices: [
-            "Frau", 
-            "Herr",
-            "Divers"
-          ],
-          value: ""
-        },
-        {
-          label: "Firma",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Vorname",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Nachname",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Postfach",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Strasse",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Postleitzahl",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Ort",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "E-Mail",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Telefon",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Ich akzeptiere die AGB",
-          type: "checkbox",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Ich akzeptiere den Datenschutz",
-          type: "checkbox",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Bemerkungen",
-          type: "input",
-          choices: [],
-          value: ""
-        },
-        {
-          label: "Geburtstag",
-          type: "input",
-          choices: [],
-          value: ""
-        }
-      ]
-    }
-
-    // add them to the list
-    setMessages([new_user_message, new_tool_message]);
-    setToolCalls([new_tool_call_message]);
-    setInputFieldsList([inputFields]);
-  }
+  function createFakeChat() {}
 
   // Function to toggle the chatbot open/close state
-  function toggleButton() {
+  const toggleButton = async () => {
+    const isChatbotCurrentlyOpen = isChatbotOpen
+
     setIsChatbotOpen(!isChatbotOpen);
     setShouldScroll(true);
+
+    // connect to the API if not already
+    if (!isChatbotCurrentlyOpen) {
+      await authenticateAPI()
+    }
+  }
+
+  const authenticateAPI = async () => {
+    if (!isAuthenticating) {
+      setIsAuthenticating(true);
+
+      // connect to the API if not already
+      const result = await client.getcurrentUser()
+      
+      if (!result.username){
+        setIsAuthenticated(false);
+        setIsAuthenticatedWrapper(false);
+      } else {
+        setIsAuthenticated(true);
+        setIsAuthenticatedWrapper(true);
+      }
+
+      setIsAuthenticating(false);
+    }
   }
 
   // will expand the tool call and show more details
@@ -389,7 +306,59 @@ function Chatbot() {
     await refreshMessage.forcePersistent(index);
   });
 
-  const singUpFor = handleRequestWrapper(async (tool_call_id: string, course_index: number, force_delete: boolean = false) => {
+  const handleFormReturn = handleRequestWrapper(async (tool_call_id: string, form_data: formReturn, force_delete: boolean = false) => {
+    // get message index
+    const messageIndex = messages.findIndex(m => m.content === tool_call_id)
+
+    // bad tool call id
+    if (messageIndex === undefined){
+      console.log("Ups something went wrong")
+      return
+    } 
+    // this toolcall is not the latest Message therefore ask the user to confirm deleting the following messages for proceeding!
+    else if (messageIndex + 1 != messagesRef.current.length) {
+      if (!force_delete){
+        setAlert({message: "Wenn sie ihre Daten erneut abschicken wollen werden alle Nachrichten nach dieser gelöscht!", onConfirm: () => handleFormReturn(tool_call_id, form_data, true)})
+        return
+      }
+
+      // delete next messages and follow thorugh!
+      console.log(messageIndex + 1)
+      const deleteResult = await deleteMessage.forcePersistent(messageIndex + 1);
+
+      if (!deleteResult) {return}
+    }
+
+    // request to change tool result
+    const message: string = JSON.stringify({info: "The user filled out the form, and hereby requests you to sign him up using the Data he provided, the signup is not yet complete", form_data: form_data})
+    const apiResult = await client.updateToolResult(tool_call_id, message)
+
+    if (apiResult) {
+      // update tool result
+      setToolCalls(tool_calls => 
+        tool_calls.map(tool_call => 
+          tool_call.id === tool_call_id
+          ? {...tool_call, tool_results: JSON.parse(message)}
+          : tool_call
+        )
+      );
+
+      // start streaming
+      try {
+        await processStreaming("", true);
+      } catch (error) {
+        raiseErrorMessage(
+          "I'm sorry while processing your request something went wrong",
+          () => refreshMessage(messages.length)
+        )
+      } finally {
+        // Enable the send button after the bot responds or an error occurs
+        setIsBotResponding(false);
+      }
+    }
+  });
+
+  const signUpFor = handleRequestWrapper(async (tool_call_id: string, course_index: number, force_delete: boolean = false) => {
     // get course list
     const courseArray: CoursePresentationInterface | undefined = courseList.find(c => c.id === tool_call_id)
     const course: Course | undefined = courseArray === undefined ? undefined : courseArray.courses[course_index]
@@ -403,7 +372,7 @@ function Chatbot() {
     } else if (messageIndex + 1 != messagesRef.current.length) {
       // ask the user if he wants to delete the 
       if (!force_delete){
-        setAlert({message: "Wenn sie mit der Anneldung Fortfahren möchten, werden die Nachrichten nach dieser neu generiert!", onConfirm: () => singUpFor(tool_call_id, course_index, true)})
+        setAlert({message: "Wenn sie mit der Anneldung Fortfahren möchten, werden die Nachrichten nach dieser neu generiert!", onConfirm: () => signUpFor(tool_call_id, course_index, true)})
         return
       }
       // delete next messages and follow thorugh!
@@ -414,7 +383,7 @@ function Chatbot() {
     }
     // create new tool result
     const courseCode = course.code
-    const newResult: string = `The user decided to signup for the course ${courseCode}. initialize the signup!`
+    const newResult: string = `The user decided to signup for the course ${courseCode}. He hereby requests you to sign him up to that course, initialize the signup!`
     
     // request to change tool result
     const apiResult = await client.updateToolResult(tool_call_id, newResult)
@@ -529,9 +498,9 @@ function Chatbot() {
               .catch(err => console.log(err))
           }
           // fetch input fields data
-          if (name === "Erfassung von Daten"){
-            const parsed: FieldArray = result;
-            setInputFieldsList(prev => [...prev, {id: id, fieldArray: parsed.fields}])
+          if (name === "Erfassung von Daten" || name === "Initialisierung der Kursanmeldung" || (name ==="Validierung der Anmeldedaten und Fertigstellung der Anmeldung" && result?.status === "ok")){
+            const parsed: Field[] = result?.fields;
+            setInputFieldsList(prev => [...prev, {id: id, fieldArray: parsed}])
           }
 
           // add result to tool call entry
@@ -545,8 +514,6 @@ function Chatbot() {
   }
 
   const handleSubmit = handleRequestWrapper(async (e: React.FormEvent) => {
-    e.preventDefault();
-
     // Disable sending messages until the bot responds
     setIsBotResponding(true);
 
@@ -616,8 +583,28 @@ function Chatbot() {
 
               <Notifications />
 
+              {/* Failed to authenticated! */}
+              {!isAuthenticated && (
+                <div className="auth-failed-message-conteiner">
+                  <img
+                    src={refreshIconError}
+                    alt="try again"
+                    className={isAuthenticating ? "woriking-indicator" : ""}
+                    style={{ width: '50px', cursor: "pointer"}}
+                    onClick={() => authenticateAPI()}
+                  />
+                  <h2>{isAuthenticating ? "Verbindung zum Server wird hergestellt..." : "Verbindung zum Server konnte nicht hergestellt werden!"}</h2>
+                </div>
+              )}
+
               <div className="Chatbot-ui-messages">
-                {messages.map((message, index) => {
+                {/* default message */}
+                {isAuthenticated && (
+                  <AssistantMessage role="assistant" content={defaultMessage}/>
+                )}
+
+                {/* all other messages */}
+                {isAuthenticated && messages.map((message, index) => {
                   if (message.role === "user"){
                     if (editMessageIndex == null || editMessageIndex != index){
                       return (<UserMessage key={index} content={message.content} onRefresh={() => refreshMessage(index)} onEdit={() => editMessage(index)} onDelete={() => deleteMessage(index)} />)
@@ -645,7 +632,7 @@ function Chatbot() {
 
                     // get Input fields data
                     const inputFields: InputFieldInterface | undefined = inputFieldsList.find(infi => infi.id === tool_call.id)
-                    const inputFieldsToPresent = inputFields === undefined ? null : inputFields.fieldArray
+                    const inputFieldsToPresent = inputFields === undefined ? null : {title: "Anmeldung:", fields: inputFields.fieldArray}
 
                     return(
                       <div className="tool-message"key={index}>
@@ -658,10 +645,10 @@ function Chatbot() {
                         
                         {/* Tool message content */}
                         {tool_call.name === "Präsentation von Kursen" && coursesToPresent != null && (
-                          <CoursePresentation courses={coursesToPresent} onSubmit={async (idx: number) => (await singUpFor(tool_call.id, idx))} onRender={() => setShouldScroll(true)}/>
+                          <CoursePresentation courses={coursesToPresent} onSubmit={async (idx: number) => (await signUpFor(tool_call.id, idx))} onRender={() => setShouldScroll(true)}/>
                         )}
-                        {tool_call.name === "Erfassung von Daten" && inputFieldsToPresent != null && (
-                          <InputFields fields={inputFieldsToPresent}/>
+                        {(tool_call.name === "Initialisierung der Kursanmeldung" || tool_call.name === "Validierung der Anmeldedaten und Fertigstellung der Anmeldung") && inputFieldsToPresent != null && (
+                          <InputFields title={inputFieldsToPresent.title} fields={inputFieldsToPresent.fields} onSubmit={(formData: formReturn) => {handleFormReturn(tool_call.id, formData)}}/>
                         )}
                         
                         {expandedIndices.has(index) && (
@@ -683,7 +670,7 @@ function Chatbot() {
             <div className="Chatbot-ui-input-container">
 
               {/* Form for message input and context selection */}
-              <form onSubmit={handleSubmit} className="Chatbot-ui-input-form">
+              <form onSubmit={(e: React.FormEvent) => {e.preventDefault(); handleSubmit(e)}} className="Chatbot-ui-input-form">
                 <textarea
                   className="Chatbot-input"
                   placeholder="Deine Frage"
